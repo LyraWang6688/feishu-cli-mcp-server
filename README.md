@@ -84,7 +84,23 @@ SMOKE_DOC_URL='https://example.feishu.cn/wiki/...' npm run smoke
 SMOKE_BASE_URL='https://example.feishu.cn/base/...?table=...' npm run smoke
 ```
 
-These checks do not create or update Feishu data.
+When `SMOKE_BASE_URL` is set, the smoke test resolves the URL and lists up to
+20 records. These checks do not create or update Feishu data.
+
+For a dedicated test document and an empty dedicated test table only, an
+explicitly gated write test can validate append, create, update, and read-back:
+
+```bash
+SMOKE_DOC_URL='https://example.feishu.cn/docx/...' \
+SMOKE_BASE_URL='https://example.feishu.cn/base/...?table=...' \
+SMOKE_BASE_CONTENT_FIELD='测试内容' \
+SMOKE_BASE_STATUS_FIELD='测试状态' \
+SMOKE_WRITE_CONFIRM='I_UNDERSTAND_THIS_WRITES_TO_FEISHU' \
+npm run smoke
+```
+
+The write test appends one timestamped paragraph and leaves one timestamped
+record in the table as an audit trail. It never deletes test data.
 
 ## Production safety
 
