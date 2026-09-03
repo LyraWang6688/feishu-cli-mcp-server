@@ -45,6 +45,7 @@ export function registerBaseTools(server: McpServer): void {
         const args = [
           "base", "+record-list", "--base-token", input.baseToken,
           "--table-id", input.tableId, "--limit", String(input.limit),
+          "--format", "json",
         ];
         for (const fieldId of input.fieldIds ?? []) args.push("--field-id", fieldId);
         if (input.filter) args.push("--filter-json", JSON.stringify(input.filter));
