@@ -70,7 +70,21 @@ The safe defaults bind to `127.0.0.1:3100`. Check health from the same server:
 curl http://127.0.0.1:3100/health
 ```
 
-Use MCP Inspector against `http://127.0.0.1:3100/mcp` for protocol testing.
+Run the built-in MCP handshake and tool-discovery test:
+
+```bash
+npm run smoke
+```
+
+Optionally validate real, read-only Feishu calls through MCP. Quote the URLs so
+their query strings are passed intact:
+
+```bash
+SMOKE_DOC_URL='https://example.feishu.cn/wiki/...' npm run smoke
+SMOKE_BASE_URL='https://example.feishu.cn/base/...?table=...' npm run smoke
+```
+
+These checks do not create or update Feishu data.
 
 ## Production safety
 
