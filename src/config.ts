@@ -17,6 +17,30 @@ function booleanFromEnv(name: string, fallback: boolean): boolean {
   throw new Error(`${name} must be true or false`);
 }
 
+function normalizedUrlFromEnv(name: string): string {
+  const raw = process.env[name] ?? "";
+  if (!raw) return "";
+
+  const url = new URL(raw);
+  if (url.protocol !== "https:") throw new Error(`${name} must use https`);
+  url.pathname = url.pathname.replace(/\/+$/, "");
+  url.search = "";
+  url.hash = "";
+  return url.toString().replace(/\/$/, "");
+}
+
+function issuerFromEnv(): string {
+  const raw = process.env.AUTH0_ISSUER ?? "";
+  if (!raw) return "";
+
+  const url = new URL(raw);
+  if (url.protocol !== "https:") throw new Error("AUTH0_ISSUER must use https");
+  url.pathname = `${url.pathname.replace(/\/+$/, "")}/`;
+  url.search = "";
+  url.hash = "";
+  return url.toString();
+}
+
 export const config = {
   host: process.env.MCP_HOST ?? "127.0.0.1",
   port: integerFromEnv("MCP_PORT", 3100, 1, 65535),
@@ -30,9 +54,13 @@ export const config = {
     20 * 1024 * 1024,
   ),
   allowRemote: booleanFromEnv("MCP_ALLOW_REMOTE", false),
-  bearerToken: process.env.MCP_BEARER_TOKEN ?? "",
+  publicBaseUrl: normalizedUrlFromEnv("MCP_PUBLIC_BASE_URL"),
+  auth0Issuer: issuerFromEnv(),
+  auth0Audience: process.env.AUTH0_AUDIENCE ?? "",
 } as const;
 
-if (config.allowRemote && config.bearerToken.length < 32) {
-  throw new Error("MCP_BEARER_TOKEN must be at least 32 characters when MCP_ALLOW_REMOTE=true");
+if (config.allowRemote) {
+  if (!config.publicBaseUrl) throw new Error("MCP_PUBLIC_BASE_URL is required when MCP_ALLOW_REMOTE=true");
+  if (!config.auth0Issuer) throw new Error("AUTH0_ISSUER is required when MCP_ALLOW_REMOTE=true");
+  if (!config.auth0Audience) throw new Error("AUTH0_AUDIENCE is required when MCP_ALLOW_REMOTE=true");
 }
