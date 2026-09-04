@@ -1,21 +1,23 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { LarkCliError, runLarkCli } from "../lark-cli.js";
-import { errorResult, requireConfirmation, successResult } from "../tool-result.js";
+import { hasScope, oauthTool } from "../oauth.js";
+import { errorResult, insufficientScopeResult, requireConfirmation, successResult } from "../tool-result.js";
 
 const token = z.string().min(1).max(512);
 const fields = z.record(z.string().min(1), z.unknown());
 
-export function registerBaseTools(server: McpServer): void {
+export function registerBaseTools(server: McpServer, scopes: ReadonlySet<string>): void {
   server.registerTool(
     "feishu_base_resolve_url",
-    {
+    oauthTool({
       title: "Resolve a Feishu Base URL",
       description: "Use this when the user provides a Feishu Base URL and the base token, table ID, or view ID must be resolved.",
       inputSchema: { url: z.string().url().max(4_096) },
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
-    },
+    }, "base:read"),
     async ({ url }) => {
+      if (!hasScope(scopes, "base:read")) return insufficientScopeResult("base:read");
       try {
         return successResult(await runLarkCli(["base", "+url-resolve", "--url", url, "--as", "user"]));
       } catch (error) {
@@ -26,7 +28,7 @@ export function registerBaseTools(server: McpServer): void {
 
   server.registerTool(
     "feishu_base_list_records",
-    {
+    oauthTool({
       title: "List Feishu Base records",
       description: "Use this when the user wants to read records from a known Feishu Base table with optional filtering, sorting, and field projection.",
       inputSchema: {
@@ -39,8 +41,9 @@ export function registerBaseTools(server: McpServer): void {
         offset: z.number().int().min(0).optional(),
       },
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
-    },
+    }, "base:read"),
     async (input) => {
+      if (!hasScope(scopes, "base:read")) return insufficientScopeResult("base:read");
       try {
         const args = [
           "base", "+record-list", "--base-token", input.baseToken,
@@ -61,7 +64,7 @@ export function registerBaseTools(server: McpServer): void {
 
   server.registerTool(
     "feishu_base_create_records",
-    {
+    oauthTool({
       title: "Create Feishu Base records",
       description: "Use this when the user explicitly asks to create one or more records in a known Feishu Base table.",
       inputSchema: {
@@ -71,8 +74,9 @@ export function registerBaseTools(server: McpServer): void {
         confirm: z.boolean().describe("Must be true only after the user confirms the target table and records"),
       },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-    },
+    }, "base:write"),
     async (input) => {
+      if (!hasScope(scopes, "base:write")) return insufficientScopeResult("base:write");
       try {
         requireConfirmation(input.confirm);
         const payload = JSON.stringify({ create_records: input.records });
@@ -88,7 +92,7 @@ export function registerBaseTools(server: McpServer): void {
 
   server.registerTool(
     "feishu_base_update_records",
-    {
+    oauthTool({
       title: "Update Feishu Base records",
       description: "Use this when the user explicitly asks to update selected fields of known records in a Feishu Base table. Read the records first.",
       inputSchema: {
@@ -98,8 +102,9 @@ export function registerBaseTools(server: McpServer): void {
         confirm: z.boolean().describe("Must be true only after the user confirms the exact record updates"),
       },
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
-    },
+    }, "base:write"),
     async (input) => {
+      if (!hasScope(scopes, "base:write")) return insufficientScopeResult("base:write");
       try {
         requireConfirmation(input.confirm);
         const updateRecords: Record<string, Record<string, unknown>> = {};
