@@ -14,7 +14,10 @@ module.exports = {
         MCP_PORT: "3100",
         LARK_CLI_BIN: "/usr/bin/lark-cli",
         LARK_PROFILE: "mcp",
-        MCP_ALLOW_REMOTE: "false"
+        MCP_ALLOW_REMOTE: "true",
+        MCP_PUBLIC_BASE_URL: "https://feishu-mcp.bamamei.online",
+        AUTH0_ISSUER: "https://lyra-feishu-mcp.jp.auth0.com/",
+        AUTH0_AUDIENCE: "https://feishu-mcp.bamamei.online"
       }
     }
   ]
