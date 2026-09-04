@@ -1,4 +1,5 @@
 import { LarkCliError } from "./lark-cli.js";
+import { bearerChallenge, type FeishuScope } from "./oauth.js";
 
 export function successResult(result: Record<string, unknown>) {
   return {
@@ -21,6 +22,17 @@ export function errorResult(error: unknown) {
   return {
     isError: true,
     content: [{ type: "text" as const, text: message }],
+  };
+}
+
+export function insufficientScopeResult(scope: FeishuScope) {
+  const message = `insufficient_scope: this tool requires ${scope}`;
+  return {
+    isError: true,
+    content: [{ type: "text" as const, text: message }],
+    _meta: {
+      "mcp/www_authenticate": [bearerChallenge("insufficient_scope", message, scope)],
+    },
   };
 }
 
