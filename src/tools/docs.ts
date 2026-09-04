@@ -1,15 +1,16 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { runLarkCli } from "../lark-cli.js";
-import { errorResult, requireConfirmation, successResult } from "../tool-result.js";
+import { hasScope, oauthTool } from "../oauth.js";
+import { errorResult, insufficientScopeResult, requireConfirmation, successResult } from "../tool-result.js";
 
 const docRef = z.string().min(1).max(4_096).describe("Feishu document/wiki URL or document token");
 const content = z.string().min(1).max(200_000);
 
-export function registerDocsTools(server: McpServer): void {
+export function registerDocsTools(server: McpServer, scopes: ReadonlySet<string>): void {
   server.registerTool(
     "feishu_docs_read",
-    {
+    oauthTool({
       title: "Read a Feishu document",
       description: "Use this when the user wants to read a Feishu Docx or Wiki document, optionally by outline, section, range, or keyword.",
       inputSchema: {
@@ -23,8 +24,9 @@ export function registerDocsTools(server: McpServer): void {
         maxDepth: z.number().int().min(-1).max(20).optional(),
       },
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
-    },
+    }, "docs:read"),
     async (input) => {
+      if (!hasScope(scopes, "docs:read")) return insufficientScopeResult("docs:read");
       try {
         const args = ["docs", "+fetch", "--doc", input.doc, "--doc-format", input.format, "--detail", input.detail];
         if (input.scope) args.push("--scope", input.scope);
@@ -42,7 +44,7 @@ export function registerDocsTools(server: McpServer): void {
 
   server.registerTool(
     "feishu_docs_create",
-    {
+    oauthTool({
       title: "Create a Feishu document",
       description: "Use this when the user explicitly asks to create a new Feishu document from supplied XML or Markdown content.",
       inputSchema: {
@@ -53,8 +55,9 @@ export function registerDocsTools(server: McpServer): void {
         confirm: z.boolean().describe("Must be true only after the user confirms document creation"),
       },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-    },
+    }, "docs:write"),
     async (input) => {
+      if (!hasScope(scopes, "docs:write")) return insufficientScopeResult("docs:write");
       try {
         requireConfirmation(input.confirm);
         const args = ["docs", "+create", "--doc-format", input.format, "--content", input.content];
@@ -70,7 +73,7 @@ export function registerDocsTools(server: McpServer): void {
 
   server.registerTool(
     "feishu_docs_update",
-    {
+    oauthTool({
       title: "Update a Feishu document",
       description: "Use this when the user explicitly asks to append, replace text, insert after a block, or replace a block in an existing Feishu document. Read the target first.",
       inputSchema: {
@@ -86,8 +89,9 @@ export function registerDocsTools(server: McpServer): void {
         confirm: z.boolean().describe("Must be true only after the user confirms the exact update"),
       },
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
-    },
+    }, "docs:write"),
     async (input) => {
+      if (!hasScope(scopes, "docs:write")) return insufficientScopeResult("docs:write");
       try {
         requireConfirmation(input.confirm);
         if (input.command === "str_replace" && !input.pattern) {
