@@ -1,4 +1,5 @@
 import express, { type Request, type Response } from "express";
+import { rateLimit } from "express-rate-limit";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { config } from "./config.js";
@@ -80,6 +81,16 @@ function protectedResourceMetadata(_req: Request, res: Response): void {
 
 const app = express();
 app.disable("x-powered-by");
+// A shared process budget, not an IP limit: forwarded headers cannot evade it.
+// Run before parsing, token verification, MCP allocation, and CLI execution.
+app.use("/mcp", rateLimit({
+  windowMs: config.rateLimitWindowMs,
+  limit: config.rateLimitMax,
+  keyGenerator: () => "mcp-process",
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  message: { error: "rate_limit_exceeded", error_description: "Too many MCP requests. Retry after the indicated delay." },
+}));
 app.use(express.json({ limit: "1mb" }));
 
 app.get("/health", (_req, res) => {

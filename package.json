@@ -13,13 +13,14 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "start": "node dist/server.js",
     "smoke": "node scripts/smoke.mjs",
-    "security-smoke": "node scripts/security-smoke.mjs && node scripts/oauth-http-smoke.mjs"
+    "security-smoke": "node scripts/security-smoke.mjs && node scripts/oauth-http-smoke.mjs && node scripts/cli-capacity-smoke.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.30.0",
     "express": "5.2.1",
-    "zod": "4.5.4",
-    "jose": "6.2.10"
+    "express-rate-limit": "8.7.0",
+    "jose": "6.2.10",
+    "zod": "4.5.4"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",

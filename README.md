@@ -103,6 +103,33 @@ required OAuth scope, and the server enforces the same scope at runtime:
 All write tools also require `confirm=true` after the user confirms the exact
 target and change. See [SECURITY.md](SECURITY.md) before adding more tools.
 
+## Request and CLI capacity limits
+
+| Environment variable | Default | Allowed range |
+|---|---:|---:|
+| `MCP_RATE_LIMIT_WINDOW_MS` | 60000 | 1000–3600000 |
+| `MCP_RATE_LIMIT_MAX` | 120 | 1–10000 |
+| `LARK_CLI_MAX_PENDING` | 4 | 1–32 |
+
+The request quota is shared by all `/mcp` callers in one process, including local
+smoke tests and unauthenticated requests. On HTTP 429, wait for `Retry-After`;
+reconnecting OAuth does not reset the quota. Health and OAuth metadata are not
+charged to this budget. CLI capacity counts executing reads and executing/queued
+writes together; rejected work is not queued. See [SECURITY.md](SECURITY.md) for
+proxy and multi-process limitations.
+
+After pulling this change on the deployment host, run `npm ci` before building
+because the dependency lockfile changed. Restart only after deployment approval.
+No Auth0 changes or ChatGPT tool refresh are needed: the tool surface is unchanged.
+
+Offline acceptance checks (no Feishu credentials or live writes):
+
+```bash
+npm run typecheck
+npm run build
+npm run security-smoke
+```
+
 ## Verified lark-cli commands
 
 - `docs +fetch`
