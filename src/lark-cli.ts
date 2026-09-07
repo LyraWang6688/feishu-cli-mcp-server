@@ -12,6 +12,7 @@ export class LarkCliError extends Error {
 }
 
 let writeQueue: Promise<void> = Promise.resolve();
+let pendingOperations = 0;
 
 function safeText(value: unknown): string {
   return String(value ?? "")
@@ -69,12 +70,22 @@ export async function runLarkCli(
   args: readonly string[],
   options: { write?: boolean } = {},
 ): Promise<Record<string, unknown>> {
-  if (!options.write) return execute(args);
+  // Count both running reads and running/queued writes. Never grow an unbounded
+  // write queue, even when accepted HTTP requests arrive faster than CLI work.
+  if (pendingOperations >= config.cliMaxPending) {
+    throw new LarkCliError("CLI capacity reached. Retry later; this operation was not queued or executed.");
+  }
+  pendingOperations += 1;
+  try {
+    if (!options.write) return await execute(args);
 
-  const task = writeQueue.then(() => execute(args));
-  writeQueue = task.then(
-    () => undefined,
-    () => undefined,
-  );
-  return task;
+    const task = writeQueue.then(() => execute(args));
+    writeQueue = task.then(
+      () => undefined,
+      () => undefined,
+    );
+    return await task;
+  } finally {
+    pendingOperations -= 1;
+  }
 }

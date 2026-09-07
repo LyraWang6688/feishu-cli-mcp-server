@@ -16,6 +16,8 @@ const server = spawn(process.execPath, ["dist/server.js"], {
     MCP_PUBLIC_BASE_URL: publicBaseUrl,
     AUTH0_ISSUER: issuer,
     AUTH0_AUDIENCE: audience,
+    MCP_RATE_LIMIT_MAX: "2",
+    MCP_RATE_LIMIT_WINDOW_MS: "2000",
   },
   stdio: ["ignore", "ignore", "pipe"],
 });
@@ -68,7 +70,42 @@ try {
     error_description: "A bearer access token is required",
   });
 
-  console.log("PASS: OAuth HTTP security checks");
+  const second = await fetch(`${origin}/mcp`, {
+    method: "POST", headers: { "content-type": "application/json" }, body: "{}",
+  });
+  assert.equal(second.status, 401);
+  await second.arrayBuffer();
+  // Exhausted requests must be rejected before JSON parsing or OAuth, even if
+  // the caller rotates purported proxy IPs or sends a malformed bearer token.
+  for (const suffix of ["", "/", ""]) {
+    const blocked = await fetch(`${origin}/mcp${suffix}`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-forwarded-for": `203.0.113.${Math.floor(Math.random() * 200) + 1}`,
+        "x-real-ip": "198.51.100.42",
+        authorization: "Bearer invalid",
+      },
+      body: "not json",
+    });
+    assert.equal(blocked.status, 429);
+    assert.ok(Number(blocked.headers.get("retry-after")) > 0);
+    assert.equal(blocked.headers.get("www-authenticate"), null);
+    assert.equal((await blocked.json()).error, "rate_limit_exceeded");
+  }
+  for (const path of ["/health", "/.well-known/oauth-protected-resource", "/.well-known/oauth-protected-resource/mcp"]) {
+    const response = await fetch(`${origin}${path}`);
+    assert.equal(response.status, 200);
+    await response.arrayBuffer();
+  }
+  await new Promise((resolve) => setTimeout(resolve, 2100));
+  const recovered = await fetch(`${origin}/mcp`, {
+    method: "POST", headers: { "content-type": "application/json" }, body: "{}",
+  });
+  assert.equal(recovered.status, 401, "Quota must recover without bypassing OAuth");
+  await recovered.arrayBuffer();
+
+  console.log("PASS: OAuth HTTP security, rate limiting, header spoofing, and quota recovery checks");
 } finally {
   server.kill("SIGTERM");
   await new Promise((resolve) => {

@@ -44,6 +44,9 @@ function issuerFromEnv(): string {
 export const config = {
   host: process.env.MCP_HOST ?? "127.0.0.1",
   port: integerFromEnv("MCP_PORT", 3100, 1, 65535),
+  rateLimitWindowMs: integerFromEnv("MCP_RATE_LIMIT_WINDOW_MS", 60_000, 1_000, 3_600_000),
+  rateLimitMax: integerFromEnv("MCP_RATE_LIMIT_MAX", 120, 1, 10_000),
+  cliMaxPending: integerFromEnv("LARK_CLI_MAX_PENDING", 4, 1, 32),
   larkCliBin: process.env.LARK_CLI_BIN ?? "lark-cli",
   larkProfile: process.env.LARK_PROFILE ?? "mcp",
   cliTimeoutMs: integerFromEnv("LARK_CLI_TIMEOUT_MS", 60_000, 1_000, 120_000),
