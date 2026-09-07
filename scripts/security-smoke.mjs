@@ -6,6 +6,7 @@ import { registerBaseTools } from "../dist/tools/base.js";
 import { registerDocsTools } from "../dist/tools/docs.js";
 
 const expectedScopes = new Map([
+  ["feishu_base_list_blocks", "base:read"],
   ["feishu_base_create", "base:write"],
   ["feishu_base_create_fields", "base:write"],
   ["feishu_base_create_records", "base:write"],
@@ -47,6 +48,7 @@ const writeCalls = [
 ];
 
 const readCallArguments = new Map([
+  ["feishu_base_list_blocks", { baseToken: "scope-test" }],
   ["feishu_base_list_records", { baseToken: "scope-test", tableId: "scope-test" }],
   ["feishu_base_resolve_url", { url: "https://example.com/base/scope-test" }],
   ["feishu_docs_read", { doc: "scope-test" }],
