@@ -47,6 +47,9 @@ jobs:
       - name: Verify security boundaries
         run: npm run security-smoke
 
+      - name: Verify Base block discovery offline
+        run: node scripts/base-block-list-smoke.mjs
+
       - name: Start local MCP server and run smoke test
         shell: bash
         run: |

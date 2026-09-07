@@ -63,6 +63,32 @@ function validateFieldDefinitions(definitions: FieldDefinition[]): void {
 
 export function registerBaseTools(server: McpServer, scopes: ReadonlySet<string>): void {
   server.registerTool(
+    "feishu_base_list_blocks",
+    oauthTool({
+      title: "List resources inside a Feishu Base",
+      description: "Discover tables, docx documents, folders, dashboards and workflows managed directly by a Base. Resolve a Base URL first to obtain baseToken. Without filters, the CLI returns its full backend list (no pagination). type filters resource kind; parentId lists only a folder's direct children. Use a table block's id as tableId for record tools and a docx block's docx_token with document read. This lists resources, not their content, table views, or widgets inside dashboards. Preserve returned resource types and identifiers; do not infer missing resource categories are empty.",
+      inputSchema: {
+        baseToken: token.describe("Base token obtained from feishu_base_resolve_url"),
+        type: z.enum(["folder", "table", "docx", "dashboard", "workflow"]).optional(),
+        parentId: token.optional().describe("Folder block ID; omit to list all blocks rather than only direct children"),
+      },
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+    }, "base:read"),
+    async (input) => {
+      if (!hasScope(scopes, "base:read")) return insufficientScopeResult("base:read");
+      try {
+        const args = ["base", "+base-block-list", "--base-token", input.baseToken, "--format", "json"];
+        if (input.type !== undefined) args.push("--type", input.type);
+        if (input.parentId !== undefined) args.push("--parent-id", input.parentId);
+        args.push("--as", "user");
+        return successResult(await runLarkCli(args));
+      } catch (error) {
+        return errorResult(error);
+      }
+    },
+  );
+
+  server.registerTool(
     "feishu_base_create",
     oauthTool({
       title: "Create a Feishu Base",

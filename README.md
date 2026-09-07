@@ -10,6 +10,7 @@ or ChatGPT plugin.
 
 ## Implemented tools
 
+- `feishu_base_list_blocks`
 - `feishu_docs_read`
 - `feishu_docs_create`
 - `feishu_docs_update`
@@ -90,6 +91,29 @@ each run would leave a new Base or field. Test the two schema tools through
 ChatGPT against a dedicated test resource and explicitly confirm the exact
 names and field definitions.
 
+## Discover content from a Base link
+
+Resolve the URL with `feishu_base_resolve_url`, then pass the returned Base token
+to `feishu_base_list_blocks` as `baseToken`. Optional `type` accepts `folder`,
+`table`, `docx`, `dashboard`, or `workflow`; optional `parentId` restricts the list
+to a folder's direct children. Omitting both lists all blocks returned by the
+backend. The CLI returns the full list and exposes no limit/offset flags.
+
+The result preserves the CLI envelope and identifiers. Use a table block's `id`
+as `tableId` for `feishu_base_list_records`; use a document's `docx_token` as `doc`
+for `feishu_docs_read`. Discovery does not read resource contents, list table
+views, enumerate dashboard widgets, or list every Base/document in the account.
+Errors remain errors, not empty resource lists. Very large results remain subject
+to the existing CLI timeout and output-size limits and are not silently truncated.
+
+This read-only tool reuses `base:read`; no new Auth0 permission is required.
+Before deployment, check `lark-cli base +base-block-list --help` on the **server**:
+the verified help was supplied from a Mac, and server versions may differ.
+After deployment, refresh the existing ChatGPT connection's tool metadata.
+Offline acceptance: `node scripts/base-block-list-smoke.mjs` after building.
+Live acceptance: resolve a dedicated Base URL, list its blocks, then use a returned
+table ID/document token with the existing read tools. No write is needed.
+
 ## OAuth and production safety
 
 Remote requests use Auth0-issued RS256 access tokens. Each tool declares its
@@ -105,6 +129,7 @@ target and change. See [SECURITY.md](SECURITY.md) before adding more tools.
 
 ## Verified lark-cli commands
 
+- `base +base-block-list`
 - `docs +fetch`
 - `docs +create`
 - `docs +update`
